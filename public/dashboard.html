@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <style>
+        body { background: #e5e5e7; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: -apple-system, sans-serif; perspective: 2000px; }
+        .phone-box { width: 420px; height: 860px; position: relative; transform-style: preserve-3d; transition: 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .rotated { transform: rotateY(180deg); }
+        .side { width: 100%; height: 100%; border: 14px solid #1a1a1a; border-radius: 65px; position: absolute; backface-visibility: hidden; box-shadow: 0 40px 80px rgba(0,0,0,0.2); overflow: hidden; }
+        .front { background: url('https://w0.peakpx.com/wallpaper/404/399/HD-wallpaper-ios-16-white-abstract.jpg') center/cover; }
+        .back { transform: rotateY(180deg); background: #fafafa; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .island { width: 130px; height: 38px; background: #000; border-radius: 20px; margin: 15px auto; }
+        .time-box { text-align: center; margin-top: 60px; color: #1a1a1a; }
+        #clock { font-size: 100px; font-weight: 200; letter-spacing: -3px; }
+        #date { font-size: 22px; font-weight: 600; margin-top: -10px; opacity: 0.8; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; padding: 40px 30px; }
+        .app { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: black; font-weight: 500; font-size: 13px; }
+        .icon { width: 75px; height: 75px; background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .flip-btn { margin-top: 30px; padding: 15px 40px; border-radius: 30px; background: #1a1a1a; color: white; font-weight: 600; cursor: pointer; border: none; }
+    </style>
+</head>
+<body>
+    <div class="phone-box" id="p">
+        <div class="side front">
+            <div class="island"></div>
+            <div class="time-box">
+                <div id="clock">12:00</div>
+                <div id="date">Lunes, 12 Abr</div>
+            </div>
+            <div class="grid">
+                <a href="apps/ajustes.html" class="app"><div class="icon">⚙️</div><span id="app_adj">Ajustes</span></a>
+            </div>
+        </div>
+        <div class="side back">
+            <div style="width:200px; height:200px; background:#f0f0f0; border-radius:45px; display:grid; grid-template-columns:1fr 1fr; padding:25px; gap:15px;">
+                <div style="background:#111; border-radius:50%; border:5px solid #222;"></div>
+                <div style="background:#111; border-radius:50%; border:5px solid #222;"></div>
+                <div style="background:#111; border-radius:50%; border:5px solid #222; grid-column: span 2; width:80px; height:80px; margin:auto;"></div>
+            </div>
+            <div style="font-size:60px; margin-top:50px; opacity:0.1;"></div>
+        </div>
+    </div>
+    <button class="flip-btn" onclick="document.getElementById('p').classList.toggle('rotated')" id="btn_f">Voltear Teléfono</button>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const lang = urlParams.get('lang') || 'es';
+
+        if(lang === 'en') {
+            document.getElementById('app_adj').innerText = "Settings";
+            document.getElementById('btn_f').innerText = "Flip Phone";
+        }
+
+        function update() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.getHours() + ":" + String(now.getMinutes()).padStart(2, '0');
+            const opt = { weekday: 'long', day: 'numeric', month: 'long' };
+            document.getElementById('date').innerText = now.toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', opt);
+        }
+        setInterval(update, 1000); update();
+    </script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPhone Pro Max Setup</title>
+    <style>
+        /* ESTILOS DE LUJO APPLE */
+        :root {
+            --blue: #007aff;
+            --gray: #8e8e93;
+            --bg: #f2f2f7;
+            --width: 420px;
+            --height: 860px;
+        }
+
+        * { box-sizing: border-box; font-family: -apple-system, sans-serif; transition: 0.3s; }
+        
+        body { 
+            background: #d1d1d6; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+
+        .iphone { 
+            width: var(--width); 
+            height: var(--height); 
+            background: white; 
+            border: 14px solid #1a1a1a; 
+            border-radius: 65px; 
+            position: relative; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 50px 100px rgba(0,0,0,0.3);
+        }
+
+        .island { 
+            width: 130px; 
+            height: 38px; 
+            background: #000; 
+            border-radius: 20px; 
+            margin: 15px auto; 
+            z-index: 10;
+        }
+
+        .content { padding: 40px; flex-grow: 1; display: flex; flex-direction: column; }
+
+        /* NAVEGACIÓN */
+        .header-nav { display: flex; justify-content: space-between; align-items: center; height: 30px; }
+        .back-btn { 
+            color: var(--blue); 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 17px; 
+            background: none; 
+            border: none;
+            padding: 0;
+            display: none; /* Se activa en pasos avanzados */
+        }
+
+        /* PASOS */
+        .step { display: none; flex-direction: column; height: 100%; animation: fadeIn 0.4s ease; }
+        .active { display: flex; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        h1 { font-size: 36px; font-weight: 800; text-align: center; margin: 30px 0 10px; }
+        p { color: var(--gray); text-align: center; margin-bottom: 40px; font-size: 16px; }
+
+        /* INPUTS PRO MAX */
+        input { 
+            background: var(--bg); 
+            border: none; 
+            padding: 20px; 
+            border-radius: 18px; 
+            margin-bottom: 12px; 
+            font-size: 17px; 
+            outline: none; 
+            width: 100%;
+        }
+        input:focus { background: #e5e5ea; }
+
+        /* BOTONES */
+        .btn-primary { 
+            background: var(--blue); 
+            color: white; 
+            border: none; 
+            padding: 22px; 
+            border-radius: 20px; 
+            font-size: 19px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            margin-top: auto;
+        }
+
+        .list-opt { 
+            background: var(--bg); 
+            padding: 22px; 
+            border-radius: 20px; 
+            margin-bottom: 12px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            font-weight: 600; 
+            font-size: 18px;
+        }
+
+        .home-indicator { width: 140px; height: 5px; background: #000; border-radius: 10px; margin: 20px auto 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="iphone">
+        <div class="island"></div>
+        
+        <div class="content">
+            <div class="header-nav">
+                <button id="backBtn" class="back-btn" onclick="goBack()">‹ Back</button>
+            </div>
+
+            <div id="s1" class="step active">
+                <div style="font-size: 60px; text-align: center; margin: 20px;">👋</div>
+                <h1 id="h_greet">Hola</h1>
+                <p id="p_greet">Selecciona tu idioma para configurar el sistema.</p>
+                <div class="list-opt" onclick="setLang('es')">Español <span>></span></div>
+                <div class="list-opt" onclick="setLang('en')">English <span>></span></div>
+            </div>
+
+            <div id="s2" class="step">
+                <h1 id="h_info">Información</h1>
+                <p id="p_info">Completa todos los campos obligatorios para tu identificación.</p>
+                <input type="text" id="nom" placeholder="Nombre / First Name">
+                <input type="text" id="ape" placeholder="Apellido / Last Name">
+                <input type="number" id="eda" placeholder="Edad / Age">
+                <input type="text" id="nac" placeholder="Nacionalidad / Nationality">
+                <input type="text" id="san" placeholder="Tipo de Sangre / Blood Type">
+                <button class="btn-primary" onclick="validateS2()" id="btn_next">Continuar</button>
+            </div>
+
+            <div id="s3" class="step">
+                <h1 id="h_acc">Cuenta</h1>
+                <p id="p_acc">Define tus credenciales de acceso al dispositivo.</p>
+                <input type="text" id="usu" placeholder="Usuario / Username">
+                <input type="password" id="pas" placeholder="Contraseña / Password">
+                <input type="text" id="dis" placeholder="Discord User (Opcional)">
+                <button class="btn-primary" onclick="finalizar()" id="btn_finish">Finalizar Setup</button>
+            </div>
+        </div>
+
+        <div class="home-indicator"></div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let lang = 'es';
+
+        const dict = {
+            es: {
+                greet: "Hola", p_greet: "Selecciona tu idioma para configurar el sistema.",
+                info: "Tu Identidad", p_info: "Completa todos los campos obligatorios para tu identificación.",
+                acc: "Seguridad", p_acc: "Define tus credenciales de acceso al dispositivo.",
+                next: "Continuar", finish: "Finalizar Setup", back: "‹ Volver",
+                err_fields: "⚠️ Debes completar todos los campos personales.",
+                err_auth: "⚠️ El usuario y la contraseña son requeridos.",
+                success: "✅ Registro exitoso. Iniciando sesión..."
+            },
+            en: {
+                greet: "Hello", p_greet: "Select your language to configure the system.",
+                info: "Identity", p_info: "Please complete all required fields for your ID.",
+                acc: "Security", p_acc: "Define your access credentials for the device.",
+                next: "Continue", finish: "Finish Setup", back: "‹ Back",
+                err_fields: "⚠️ You must complete all personal fields.",
+                err_auth: "⚠️ Username and Password are required.",
+                success: "✅ Registration success. Loading login..."
+            }
+        };
+
+        function setLang(l) {
+            lang = l;
+            // Traducir UI
+            document.getElementById('h_greet').innerText = dict[lang].greet;
+            document.getElementById('p_greet').innerText = dict[lang].p_greet;
+            document.getElementById('h_info').innerText = dict[lang].info;
+            document.getElementById('p_info').innerText = dict[lang].p_info;
+            document.getElementById('h_acc').innerText = dict[lang].acc;
+            document.getElementById('p_acc').innerText = dict[lang].p_acc;
+            document.getElementById('btn_next').innerText = dict[lang].next;
+            document.getElementById('btn_finish').innerText = dict[lang].finish;
+            document.getElementById('backBtn').innerText = dict[lang].back;
+            
+            goNext(2);
+        }
+
+        function goNext(n) {
+            currentStep = n;
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('s'+n).classList.add('active');
+            document.getElementById('backBtn').style.display = (n > 1) ? 'block' : 'none';
+        }
+
+        function goBack() {
+            if(currentStep > 1) goNext(currentStep - 1);
+        }
+
+        function validateS2() {
+            const fields = ['nom', 'ape', 'eda', 'nac', 'san'];
+            if(fields.some(f => !document.getElementById(f).value.trim())) {
+                return alert(dict[lang].err_fields);
+            }
+            goNext(3);
+        }
+
+        async function finalizar() {
+            const u = document.getElementById('usu').value.trim();
+            const p = document.getElementById('pas').value.trim();
+
+            if(!u || !p) return alert(dict[lang].err_auth);
+
+            const data = {
+                nombre: document.getElementById('nom').value,
+                apellido: document.getElementById('ape').value,
+                edad: document.getElementById('eda').value,
+                nacionalidad: document.getElementById('nac').value,
+                tipo_sangre: document.getElementById('san').value,
+                usuario: u, password: p,
+                discord_user: document.getElementById('dis').value
+            };
+
+            try {
+                const res = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if(res.ok) {
+                    alert(dict[lang].success);
+                    window.location.href = "login.html?lang=" + lang;
+                } else {
+                    alert("Error: Username taken / Usuario ya existe");
+                }
+            } catch (e) { alert("Server connection error"); }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>iPhone Login</title>
+    <style>
+        body { background: #e5e5e7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: -apple-system, sans-serif; }
+        .iphone { width: 420px; height: 860px; background: white; border: 14px solid #1a1a1a; border-radius: 65px; display: flex; flex-direction: column; padding: 50px; box-sizing: border-box; }
+        .island { width: 130px; height: 38px; background: #000; border-radius: 20px; align-self: center; margin-bottom: 120px; }
+        h1 { font-size: 38px; font-weight: 800; text-align: center; margin-bottom: 10px; }
+        p { color: #8e8e93; text-align: center; margin-bottom: 50px; font-size: 16px; }
+        input { background: #f2f2f7; border: none; padding: 22px; border-radius: 20px; margin-bottom: 15px; font-size: 18px; outline: none; width: 100%; }
+        button { background: #007aff; color: white; border: none; padding: 22px; border-radius: 20px; font-size: 20px; font-weight: 700; cursor: pointer; }
+        .link { color: #007aff; text-align: center; margin-top: 30px; cursor: pointer; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="iphone">
+        <div class="island"></div>
+        <h1 id="h_l">Entrar</h1>
+        <p id="p_l">Inicia sesión con tus datos.</p>
+        <input type="text" id="u" placeholder="Usuario">
+        <input type="password" id="p" placeholder="Contraseña">
+        <button onclick="login()" id="btn_l">Desbloquear</button>
+        <div class="link" onclick="location.href='registro.html'" id="lnk">Crear nueva cuenta</div>
+    </div>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const lang = urlParams.get('lang') || 'es';
+
+        if(lang === 'en') {
+            document.getElementById('h_l').innerText = "Sign In";
+            document.getElementById('p_l').innerText = "Enter your credentials.";
+            document.getElementById('btn_l').innerText = "Unlock";
+            document.getElementById('lnk').innerText = "Create new account";
+        }
+
+        async function login() {
+            const res = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ usuario: document.getElementById('u').value, password: document.getElementById('p').value })
+            });
+            const data = await res.json();
+            if(data.success) {
+                localStorage.setItem('userRP', JSON.stringify(data.user));
+                window.location.href = "dashboard.html?lang=" + lang;
+            } else { alert("Error"); }
+        }
+    </script>
+</body>
+</html>
