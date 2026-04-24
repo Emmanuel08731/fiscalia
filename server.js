@@ -6,12 +6,27 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware Esencial
+app.use(express.json());
+app.use(cors());
+
+// --- SOLUCIÓN AL ERROR "Cannot GET /" ---
+// 1. Servir archivos estáticos desde la carpeta 'public'
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 2. Ruta principal: Carga el login automáticamente
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// --- MOTOR DE BASE DE DATOS INMORTAL ---
+// --- LÓGICA DE BASE DE DATOS (Mantenida) ---
 const bootstrap = async () => {
     try {
         await pool.query(`
@@ -27,21 +42,18 @@ const bootstrap = async () => {
                 nacionalidad TEXT DEFAULT 'Colombiana'
             );
         `);
-        console.log("🏛️  Esquema Judicial Sincronizado.");
-    } catch (e) { console.error(e); }
+        console.log("🏛️  SPOA: Sistema de archivos y DB listos.");
+    } catch (e) { console.error("Error inicializando DB:", e); }
 };
 bootstrap();
 
-// --- LÓGICA DE AUTENTICACIÓN ---
+// --- RUTAS DE API ---
 app.post('/api/auth', async (req, res) => {
     const { action, nombre, apellido, cedula, password, edad, sangre, adminCode } = req.body;
-    
     try {
         if (action === 'register') {
             const hash = await bcrypt.hash(password, 10);
-            // CÓDIGO SECRETO PARA SER ADMIN: "EMMA2026"
             const rango = (adminCode === 'EMMA2026') ? 'Admin' : 'Ciudadano';
-            
             await pool.query(
                 `INSERT INTO usuarios (nombre, apellido, cedula, password, rango, edad, sangre) 
                  VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -49,7 +61,6 @@ app.post('/api/auth', async (req, res) => {
             );
             return res.json({ success: true });
         }
-
         if (action === 'login') {
             const result = await pool.query('SELECT * FROM usuarios WHERE cedula = $1', [cedula]);
             if (result.rows.length > 0) {
@@ -58,9 +69,11 @@ app.post('/api/auth', async (req, res) => {
                     return res.json({ success: true, user });
                 }
             }
-            return res.status(401).json({ success: false, error: "Credenciales Inválidas" });
+            return res.status(401).json({ success: false, error: "Credenciales Incorrectas" });
         }
     } catch (e) { res.status(400).json({ success: false, error: e.message }); }
 });
 
-app.listen(3000, () => console.log("🚀 Sistema Judicial v4.0 en Línea"));
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+});
