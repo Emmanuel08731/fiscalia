@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SPOA | Denuncia Virtual</title>
+    <style>
+        body { margin: 0; font-family: -apple-system, sans-serif; background: #f5f5f7; color: #1d1d1f; }
+        
+        nav { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); height: 48px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #d2d2d7; position: fixed; width: 100%; top: 0; }
+        nav a { text-decoration: none; color: #1d1d1f; font-size: 12px; margin: 0 20px; }
+
+        .form-card { max-width: 600px; margin: 100px auto; background: #fff; padding: 40px; border-radius: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+        h1 { font-size: 32px; letter-spacing: -1px; text-align: center; }
+        p.info { text-align: center; color: #86868b; margin-bottom: 30px; }
+
+        label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1d1d1f; }
+        input, textarea, select { width: 100%; padding: 14px; border: 1px solid #d2d2d7; border-radius: 12px; margin-bottom: 20px; box-sizing: border-box; font-size: 16px; background: #fbfbfd; }
+        input:focus, textarea:focus { border-color: #0071e3; outline: none; background: #fff; }
+
+        .btn-submit { width: 100%; padding: 16px; background: #0071e3; color: #fff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-submit:hover { background: #0077ed; transform: scale(1.01); }
+        
+        .prox { background: #f5f5f7; padding: 20px; border-radius: 15px; border: 1px dashed #d2d2d7; text-align: center; color: #86868b; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="index.html">Inicio</a>
+        <a href="buscados.html">Buscados</a>
+        <a href="denuncias.html" style="font-weight: 600;">Denuncias</a>
+        <a href="login.html">Mi Perfil</a>
+    </nav>
+
+    <div class="form-card">
+        <h1>Radicación de Denuncia</h1>
+        <p class="info">Complete el formulario para iniciar un proceso judicial.</p>
+
+        <form id="denunciaForm">
+            <label>Asunto / Título del Hecho</label>
+            <input type="text" id="asunto" placeholder="Ej: Robo de vehículo en Bogotá" required>
+
+            <label>Cédula del Acusado (Si la conoce)</label>
+            <input type="text" id="acusado" placeholder="Cédula o ID del denunciado">
+
+            <label>Descripción de los Hechos</label>
+            <textarea id="detalle" rows="6" placeholder="Describa fecha, hora y lo sucedido con detalle..." required></textarea>
+
+            <button type="button" class="btn-submit" onclick="radicar()">Radicar Denuncia Oficial</button>
+        </form>
+
+        <div class="prox">
+            <b>Próximamente:</b> Adjuntar pruebas multimedia (Fotos/Videos)
+        </div>
+    </div>
+
+    <script>
+        async function radicar() {
+            const user = JSON.parse(localStorage.getItem('session_user'));
+            if (!user) {
+                alert("Debe estar logueado para denunciar.");
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const data = {
+                asunto: document.getElementById('asunto').value,
+                detalle: document.getElementById('detalle').value,
+                cedula_acusado: document.getElementById('acusado').value,
+                id_denunciante: user.id
+            };
+
+            const res = await fetch('/api/denunciar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                alert("Denuncia radicada exitosamente bajo el código NUNC-" + Math.floor(Math.random()*9000));
+                window.location.href = 'dashboard.html';
+            }
+        }
+    </script>
+</body>
+</html>

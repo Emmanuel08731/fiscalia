@@ -1,138 +1,133 @@
-/**
- * *****************************************************************************
- * DARKCORD STUDIO - SISTEMA OPERATIVO MÓVIL (BACKEND)
- * *****************************************************************************
- * Descripción: Gestión de base de datos PostgreSQL en Render con soporte
- * para múltiples idiomas y validaciones de identidad ciudadana.
- * *****************************************************************************
- */
-
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
+const bcrypt = require('bcrypt');
 const cors = require('cors');
 const path = require('path');
-const morgan = require('morgan');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Configuración de Middlewares Pro
 app.use(express.json());
 app.use(cors());
-app.use(morgan('combined')); // Logs detallados de cada petición
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuración de Conexión a Base de Datos (Render)
 const pool = new Pool({
-    connectionString: "postgresql://base_de_datos_ci70_user:V9zztzVkPDXBfNraRmH85ubSt6YFOHWq@dpg-d7e3021j2pic73fvejd0-a.virginia-postgres.render.com/base_de_datos_ci70",
+    connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-/**
- * INICIALIZACIÓN DE LA INFRAESTRUCTURA
- * Asegura que la tabla de ciudadanos esté configurada correctamente.
- */
-const bootDatabase = async () => {
-    const createTableSQL = `
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id SERIAL PRIMARY KEY,
-            nombre VARCHAR(100) NOT NULL,
-            apellido VARCHAR(100) NOT NULL,
-            edad INTEGER NOT NULL,
-            nacionalidad VARCHAR(100) NOT NULL,
-            tipo_sangre VARCHAR(20) NOT NULL,
-            usuario VARCHAR(100) UNIQUE NOT NULL,
-            password VARCHAR(255) NOT NULL,
-            discord_user VARCHAR(100),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    `;
-    
+// --- MOTOR DE ESTRUCTURA JUDICIAL ---
+const setupSPOA = async () => {
+    console.log("🛠️  Sincronizando Sistema de Información Judicial...");
     try {
-        const client = await pool.connect();
-        console.log("-----------------------------------------");
-        console.log("📡 DATABASE: CONEXIÓN ESTABLECIDA");
-        await client.query(createTableSQL);
-        console.log("✅ ESTRUCTURA DE TABLAS: OK");
-        console.log("-----------------------------------------");
-        client.release();
+        // Creamos la tabla con todos los campos necesarios para el RP
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                nombre TEXT NOT NULL,
+                apellido TEXT NOT NULL,
+                cedula TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                edad INTEGER,
+                nacionalidad TEXT DEFAULT 'Colombiana',
+                tipo_sangre TEXT DEFAULT 'O+',
+                telefono TEXT,
+                rango TEXT DEFAULT 'Ciudadano',
+                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Tabla de Denuncias (SPOA)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS denuncias (
+                id SERIAL PRIMARY KEY,
+                asunto TEXT NOT NULL,
+                detalle TEXT NOT NULL,
+                id_denunciante INTEGER REFERENCES usuarios(id),
+                cedula_acusado TEXT NOT NULL,
+                estado TEXT DEFAULT 'En Indagación',
+                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Tabla de Orden de Captura
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS buscados (
+                id SERIAL PRIMARY KEY,
+                alias TEXT NOT NULL,
+                delito TEXT NOT NULL,
+                recompensa TEXT NOT NULL,
+                nivel_peligrosidad TEXT DEFAULT 'Media'
+            );
+        `);
+
+        // Configuración de Administrador Maestro (Emma)
+        const emmaHash = await bcrypt.hash('emmanuel2013', 10);
+        await pool.query(`
+            INSERT INTO usuarios (nombre, apellido, cedula, password, rango)
+            VALUES ('Emmanuel', 'Fiscalía', 'emma062013', $1, 'Admin')
+            ON CONFLICT (cedula) DO NOTHING;
+        `, [emmaHash]);
+
+        console.log("🏛️  Base de Datos: SPOA v3.0 Conectada y Lista.");
     } catch (err) {
-        console.error("❌ CRITICAL ERROR DB:", err.message);
+        console.error("⚠️ Error en DB. Intentando corrección de esquema...");
+        // Si hay un error de columna, intentamos agregarla manualmente
+        await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS tipo_sangre TEXT DEFAULT 'O+';`);
+        await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS nacionalidad TEXT DEFAULT 'Colombiana';`);
     }
 };
+setupSPOA();
 
-bootDatabase();
+// --- RUTAS DE AUTENTICACIÓN ---
 
-// --- ENDPOINTS DE AUTENTICACIÓN ---
-
-/**
- * POST /auth/register
- * Registra un nuevo ciudadano con validación de duplicados.
- */
-app.post('/auth/register', async (req, res) => {
-    const { 
-        nombre, apellido, edad, nacionalidad, 
-        tipo_sangre, usuario, password, discord_user 
-    } = req.body;
-
-    // Validación estricta en el servidor
-    if (!nombre || !apellido || !edad || !nacionalidad || !tipo_sangre || !usuario || !password) {
-        return res.status(400).json({ 
-            success: false, 
-            error: "Missing mandatory fields" 
-        });
-    }
+app.post('/api/auth/handler', async (req, res) => {
+    const { action, nombre, apellido, cedula, password, edad, nacionalidad, sangre } = req.body;
 
     try {
-        const query = `
-            INSERT INTO usuarios (nombre, apellido, edad, nacionalidad, tipo_sangre, usuario, password, discord_user)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id;
-        `;
-        const values = [nombre, apellido, edad, nacionalidad, tipo_sangre, usuario, password, discord_user || 'None'];
-        const result = await pool.query(query, values);
-        
-        console.log(`👤 Ciudadano Registrado: ${usuario} (ID: ${result.rows[0].id})`);
-        res.status(201).json({ success: true, id: result.rows[0].id });
-    } catch (err) {
-        if (err.code === '23505') {
-            res.status(409).json({ success: false, error: "Username already exists" });
-        } else {
-            res.status(500).json({ success: false, error: "Database internal error" });
+        if (action === 'register') {
+            const hash = await bcrypt.hash(password, 10);
+            await pool.query(
+                `INSERT INTO usuarios (nombre, apellido, cedula, password, edad, nacionalidad, tipo_sangre) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [nombre, apellido, cedula, hash, edad, nacionalidad, sangre]
+            );
+            return res.json({ success: true });
         }
+
+        if (action === 'login') {
+            const result = await pool.query('SELECT * FROM usuarios WHERE cedula = $1', [cedula]);
+            if (result.rows.length > 0) {
+                const user = result.rows[0];
+                const match = await bcrypt.compare(password, user.password);
+                if (match) return res.json({ success: true, user });
+            }
+            return res.status(401).json({ success: false, error: "Cédula o clave incorrecta" });
+        }
+    } catch (e) {
+        res.status(400).json({ success: false, error: e.message });
     }
 });
 
-/**
- * POST /auth/login
- * Verifica credenciales para acceso al Dashboard.
- */
-app.post('/auth/login', async (req, res) => {
-    const { usuario, password } = req.body;
+// --- RUTAS DE DATOS ---
 
+app.get('/api/perfil/:id', async (req, res) => {
     try {
-        const query = 'SELECT * FROM usuarios WHERE usuario = $1 AND password = $2';
-        const result = await pool.query(query, [usuario, password]);
-
-        if (result.rows.length > 0) {
-            const user = result.rows[0];
-            delete user.password; // Ocultar contraseña por seguridad
-            res.json({ success: true, user });
-        } else {
-            res.status(401).json({ success: false, error: "Invalid credentials" });
-        }
-    } catch (err) {
-        res.status(500).json({ success: false, error: "Server error" });
-    }
+        const user = await pool.query('SELECT * FROM usuarios WHERE id = $1', [req.params.id]);
+        const judicial = await pool.query('SELECT * FROM denuncias WHERE cedula_acusado = $1', [user.rows[0].cedula]);
+        res.json({ user: user.rows[0], procesos: judicial.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Inicio de Servidor
-app.listen(PORT, () => {
-    console.log(`
-    =========================================
-    📱 DARKCORD OS - SERVER RUNNING
-    🌍 URL: http://localhost:${PORT}
-    🛠️  MODE: PRO MAX PRODUCTION
-    =========================================
-    `);
+app.get('/api/buscados', async (req, res) => {
+    const result = await pool.query('SELECT * FROM buscados');
+    res.json(result.rows);
 });
+
+// --- ACCIONES ADMIN (EMMA) ---
+app.post('/api/admin/orden-captura', async (req, res) => {
+    const { alias, delito, recompensa } = req.body;
+    await pool.query('INSERT INTO buscados (alias, delito, recompensa) VALUES ($1, $2, $3)', [alias, delito, recompensa]);
+    res.json({ success: true });
+});
+
+app.listen(3000, () => console.log("🚀 Servidor Fiscalía Activo en Puerto 3000"));

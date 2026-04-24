@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SPOA | Objetivos Prioritarios</title>
+    <style>
+        :root { --apple-blue: #0071e3; --apple-red: #d70015; }
+        body { margin: 0; font-family: -apple-system, sans-serif; background: #fff; color: #1d1d1f; }
+        
+        /* Navbar Estilo Apple */
+        nav { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); height: 48px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #d2d2d7; position: fixed; width: 100%; top: 0; z-index: 1000; }
+        nav a { text-decoration: none; color: #1d1d1f; font-size: 12px; margin: 0 20px; opacity: 0.8; }
+
+        .container { max-width: 1000px; margin: 100px auto; padding: 0 20px; text-align: center; }
+        h1 { font-size: 48px; letter-spacing: -1.5px; margin-bottom: 10px; }
+        .subtitle { color: #86868b; font-size: 24px; margin-bottom: 50px; }
+
+        /* Grid de Criminales */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; }
+        .card { background: #fff; border-radius: 20px; border: 1px solid #d2d2d7; overflow: hidden; transition: 0.3s ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .card-img { height: 200px; background: #f5f5f7; display: flex; align-items: center; justify-content: center; font-size: 60px; }
+        .card-body { padding: 20px; text-align: left; }
+        .card-body span { color: var(--apple-red); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+        .card-body h3 { margin: 5px 0; font-size: 22px; }
+        .card-body p { color: #424245; font-size: 14px; line-height: 1.4; }
+
+        /* Estado Vacío */
+        #empty-state { margin-top: 100px; }
+        #empty-state h2 { color: #d2d2d7; font-size: 32px; }
+
+        footer { margin-top: 100px; padding: 40px; border-top: 1px solid #d2d2d7; font-size: 12px; color: #86868b; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="index.html">Inicio</a>
+        <a href="buscados.html" style="opacity: 1; font-weight: 600;">Buscados</a>
+        <a href="denuncias.html">Denuncias</a>
+        <a href="login.html">Mi Cuenta</a>
+    </nav>
+
+    <div class="container">
+        <h1>Los Más Buscados</h1>
+        <p class="subtitle">Ayude a la justicia. Cualquier información es confidencial.</p>
+
+        <div id="grid-buscados" class="grid">
+            </div>
+
+        <div id="empty-state" style="display: none;">
+            <h2>No hay objetivos de alto valor registrados.</h2>
+            <p style="color: #86868b;">El sistema se encuentra actualizado al día de hoy.</p>
+        </div>
+    </div>
+
+    <footer>
+        © 2026 Fiscalía General de la Nación - Sistema Digital SPOA
+    </footer>
+
+    <script>
+        async function cargarBuscados() {
+            try {
+                const res = await fetch('/api/buscados');
+                const data = await res.json();
+                const grid = document.getElementById('grid-buscados');
+                const empty = document.getElementById('empty-state');
+
+                if (data.length === 0) {
+                    grid.style.display = 'none';
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                grid.innerHTML = data.map(b => `
+                    <div class="card">
+                        <div class="card-img">👤</div>
+                        <div class="card-body">
+                            <span>Recompensa: $${b.recompensa}</span>
+                            <h3>Alias "${b.alias}"</h3>
+                            <p><b>Delito:</b> ${b.delito}</p>
+                            <p>Se le considera peligroso. Si tiene información, contacte de inmediato.</p>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error("Error cargando buscados", err);
+            }
+        }
+        cargarBuscados();
+    </script>
+</body>
+</html>
